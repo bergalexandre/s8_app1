@@ -1,3 +1,4 @@
+import random
 import pygame
 import csv
 from Monster import *
