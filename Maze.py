@@ -21,6 +21,7 @@ class Maze:
         self.obstacleList = []
         self.monsterList = []
         self.exit = []
+        self.start = []
         self.tile_size_x = WIDTH/self.M
         self.tile_size_y = HEIGHT / self.N
         self._coin_surf = pygame.image.load("assets/coin.png")
@@ -37,10 +38,18 @@ class Maze:
         return x, y
 
     def make_maze_wall_list(self):
+        # Start tile wall
         for i in range(len(self.maze)):
             for j in range(len(self.maze[i])):
                 if self.maze[i][j] == '1':
                     cell = pygame.Rect((j * self.tile_size_x, i * self.tile_size_y), (self.tile_size_x, self.tile_size_y))
+                    self.wallList.append(cell)
+                elif self.maze[i][j] == 'S':
+                    print([i,j])
+                    # Add conditions for starts not at top.
+                    self.start = [(j + 0.2) * self.tile_size_x, (i + 0.2) * self.tile_size_y]
+                    cell = pygame.Rect((j * self.tile_size_x, i * self.tile_size_y),
+                                       (self.tile_size_x, 0.1 * self.tile_size_y))
                     self.wallList.append(cell)
 
     def make_maze_item_lists(self):
@@ -64,6 +73,7 @@ class Maze:
 
     def draw(self, display_surf, image_surf):
         image_surf = pygame.transform.scale(image_surf, (self.tile_size_x, self.tile_size_y))
+        thinwall_surf = pygame.transform.scale(image_surf, (self.tile_size_x, 0.1 * self.tile_size_y))
         for i in range(len(self.maze)):
             for j in range(len(self.maze[i])):
                 if self.maze[i][j] == '1':
@@ -71,9 +81,11 @@ class Maze:
                 elif self.maze[i][j] == 'S':
                     pygame.draw.rect(display_surf, BLUE,
                                      (j * self.tile_size_x, i * self.tile_size_y, self.tile_size_x, self.tile_size_y))
+                    display_surf.blit(thinwall_surf, (j * self.tile_size_x, i * self.tile_size_y))
                 elif self.maze[i][j] == 'E':
                     pygame.draw.rect(display_surf, GREEN,
                                      (j * self.tile_size_x, i * self.tile_size_y, self.tile_size_x, self.tile_size_y))
+                    display_surf.blit(thinwall_surf, (j * self.tile_size_x, (i+0.9) * self.tile_size_y))
 
         for item in self.coinList:
             display_surf.blit(self._coin_surf, item.topleft)
