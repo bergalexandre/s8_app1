@@ -6,7 +6,6 @@ from Maze import *
 from Constants import *
 from IA_Player import *
 
-
 class App:
     windowWidth = WIDTH
     windowHeight = HEIGHT
@@ -25,7 +24,6 @@ class App:
         self.timer = 0.0
         self.player = Player()
         self.maze = Maze(mazefile)
-        self.ia_player = IA_Player()
 
     def on_init(self):
         pygame.init()
@@ -41,6 +39,7 @@ class App:
         self.player.set_size(PLAYER_SIZE*self.maze.tile_size_x, PLAYER_SIZE*self.maze.tile_size_x)
         self._image_surf = pygame.transform.scale(self._image_surf, self.player.get_size())
         self._block_surf = pygame.image.load("assets/wall.png")
+        self.ia_player = IA_Player(max(self.maze.tile_size_x, self.maze.tile_size_y))
 
     def on_keyboard_input(self, keys):
         if keys[K_RIGHT] or keys[K_d]:
@@ -73,16 +72,16 @@ class App:
 
     # FONCTION À Ajuster selon votre format d'instruction
     def on_AI_input(self, instruction):
-        if instruction == 'RIGHT':
+        if 'RIGHT' in instruction:
             self.move_player_right()
 
-        if instruction == 'LEFT':
+        if 'LEFT' in instruction:
             self.move_player_left()
 
-        if instruction == 'UP':
+        if "UP" in instruction:
             self.move_player_up()
 
-        if instruction == 'DOWN':
+        if "DOWN" in instruction:
             self.move_player_down()
 
     def move_player_right(self):
@@ -189,9 +188,12 @@ class App:
             keys = pygame.key.get_pressed()
             self.on_keyboard_input(keys)
 
-            #perceptions = self.maze.make_perception_list(self.player, self._display_surf)
-            #instruction = self.ia_player.getNextInstruction(*perceptions)
-            #self.on_AI_input(instruction)
+            if(keys[K_p]):
+                print(self.player.get_position())
+
+            perceptions = self.maze.make_perception_list(self.player, self._display_surf)
+            instruction = self.ia_player.getNextInstruction(*perceptions, self.player)
+            self.on_AI_input(instruction)
             
             if self.on_coin_collision():
                 self.score += 1
