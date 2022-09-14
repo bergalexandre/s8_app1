@@ -26,6 +26,9 @@ class Player:
     def set_attributes(self, new_attributes):
         self.attributes = new_attributes
 
+    def get_center(self):
+        return ((self.x+self.size_x/2),(self.y+self.size_y/2))
+
     def set_size(self, sizex, sizey):
         self.size_x = sizex
         self.size_y = sizey
