@@ -39,7 +39,7 @@ class App:
         self.player.set_size(PLAYER_SIZE*self.maze.tile_size_x, PLAYER_SIZE*self.maze.tile_size_x)
         self._image_surf = pygame.transform.scale(self._image_surf, self.player.get_size())
         self._block_surf = pygame.image.load("assets/wall.png")
-        self.ia_player = IA_Player(max(self.maze.tile_size_x, self.maze.tile_size_y))
+        self.ia_player = IA_Player(max(self.maze.tile_size_x, self.maze.tile_size_y), self.maze)
 
     def on_keyboard_input(self, keys):
         if keys[K_RIGHT] or keys[K_d]:

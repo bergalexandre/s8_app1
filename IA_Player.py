@@ -1,20 +1,43 @@
 import pygame
 import time
 from swiplserver import PrologMQI
+from collections import defaultdict as dd
+from queue import PriorityQueue
 from IA_FuzzyController import *
 import math
 from Player import Player
+
+class Case:
+    def __init__(self, x, y, h, parent=None, start=False, end=False, wall=False):
+        self.x = x
+        self.y = y
+        self.position = (x,y)
+        self.g= float('inf')
+        self.h = h
+        self.f = float('inf')
+        self.parent = parent
+        self.start = start
+        self.end = end
+        self.wall = wall
 
 class IA_Player:
     prolog_thread = None
     mqi = PrologMQI(output_file_name="output.txt")
     maze_tile_size = 1
+    
 
-    def __init__(self, maze_tile_size):
+    def __init__(self, maze_tile_size, maze):
         self.prolog_thread = self.mqi.create_thread()
         self.prolog_thread.query("[prolog/pathfinder]")
         self.fuzzy_controller = IA_FuzzyController(maze_tile_size)
         self.maze_tile_size = maze_tile_size
+        
+        self.maze = maze.maze
+        self.node_matrix = None
+        start_x, start_y, end_x, end_y = self.nodify_maze()
+        self.path = self.build_tree(start_x, start_y, end_x, end_y)
+        print("")
+        
 
     def __del__(self):
         self.mqi.stop()
@@ -118,8 +141,10 @@ class IA_Player:
     def getNextInstruction(self, walls: list[pygame.Rect], obstacles: list[pygame.Rect], items: list[pygame.Rect], monsters, player, direction, show_debug_info):
         self.findPathProlog(walls, player, show_debug_info)
 
-        distance_wall, distance_obstacle = self.getClosestPerception(walls, obstacles, items, monsters, player)         
-
+        distance_wall, distance_obstacle = self.getClosestPerception(walls, obstacles, items, monsters, player) 
+                
+        direction =self.getDirection(player) # Algo A star
+        
         match direction:
             case "UP":
                 distance_obstacle = (distance_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
@@ -165,3 +190,113 @@ class IA_Player:
         #        commandes.append("DOWN")
 
         return commandes
+    
+    def getDirection(self, player):
+        current_position = [*player.get_position()]
+        active_coord = (int(np.floor(current_position[1]/50)), int(np.floor(current_position[0]/50)))
+        next_coord = self.path[active_coord]
+        delta=np.asarray(next_coord) - np.asarray(active_coord)
+        if (delta ==[1.0, 0.0]).all():
+                direction= "DOWN"
+        elif (delta ==[-1.0, 0.0]).all():
+                direction= "up"
+        elif (delta ==[0.0, 1.0]).all():
+                direction= "LEFT"
+        elif (delta ==[0.0, -1.0]).all():
+                direction= "RIGHT"
+                      
+        return direction
+        
+    
+    def nodify_maze(self):
+        self.node_matrix = dd(dict)
+        m = np.array(self.maze)
+        start = np.where(m=='S')
+        end = np.where(m=='E')
+        
+        all_coordinates = np.dstack(np.where(m.T))
+        all_coordinates = all_coordinates[0, :, :]
+        
+        # Coordinates of start and end in a numpy array
+        self.start = np.concatenate((start[0], start[1]), axis=0)
+        #self.start = np.hstack(start)
+        self.end = np.concatenate((end[1], end[0]), axis=0)
+        #self.end = np.hstack(end)
+        
+        # Wall matrix and heuristic matrix
+        heuristic_matrix = np.linalg.norm(all_coordinates - self.end, axis=1)
+        LONGUEUR = len(m)
+        HAUTEUR = len(m[0])
+        heuristic_matrix = np.reshape(heuristic_matrix, (HAUTEUR, LONGUEUR)).T      
+        
+        for i in range(len(m)):
+            for j in range(len(m[0])):
+                if m[i][j] == '1':
+                    self.node_matrix[i][j] = Case(i, j, heuristic_matrix[i][j], wall=True)
+                elif m[i][j] =='S':
+                    self.node_matrix[i][j] = Case(i, j, heuristic_matrix[i][j],start=True)
+                elif m[i][j] =='E':
+                    self.node_matrix[i][j] = Case(i, j, heuristic_matrix[i][j],end=True)
+                else:
+                    self.node_matrix[i][j] = Case(i, j, heuristic_matrix[i][j],)
+        
+        start_x , start_y = self.start
+        end_y , end_x = self.end
+        
+        return start_x , start_y, end_x, end_y
+        
+    def h(self, c1, c2):
+        x1,y1=c1
+        x2,y2=c2
+        
+        return np.sqrt(abs(x1-x2)**2 + abs(y1-y2)**2)
+        
+    def build_tree(self, x, y, _x, _y):
+        LONGUEUR = len(self.node_matrix)
+        HAUTEUR = len(self.node_matrix[0])
+        
+        open_nodes = []
+        closed_nodes = []
+        start = (x,y)
+        end = (_x, _y)
+        self.node_matrix[x][y].g = 0
+        self.node_matrix[x][y].f = self.h(start,end)
+        
+        open_nodes = PriorityQueue()
+        open_nodes.put((self.h(start,end),self.h(start,end),start))
+        path={}
+        
+        while not open_nodes.empty():
+            current_coord = open_nodes.get()[2]
+            if current_coord==end:
+                break
+            for d in [(0, -1), (0, 1), (-1, 0), (1, 0)]:
+                coord_x = current_coord[0]+d[0]
+                coord_y = current_coord[1]+d[1]
+                if coord_x in range(LONGUEUR) and coord_y in range(HAUTEUR):
+                    current_node = self.node_matrix[current_coord[0]][current_coord[1]]
+                    temp_node = self.node_matrix[coord_x][coord_y]
+                    if temp_node.wall ==False:
+                        if d==(0, 1):
+                            child=(current_coord[0],current_coord[1]+1)
+                        if d==(0, -1):
+                            child=(current_coord[0],current_coord[1]-1)
+                        if d==(-1, 0):
+                            child=(current_coord[0]-1,current_coord[1])
+                        if d==(1, 0):
+                            child=(current_coord[0]+1,current_coord[1])
+
+                        g_score=current_node.g+1
+                        f_score=g_score+self.h(temp_node.position,end)
+
+                        if f_score < temp_node.f:
+                            temp_node.g= g_score
+                            temp_node.f= f_score
+                            open_nodes.put((f_score,self.h(child,end),child))
+                            path[child]=current_coord
+        finale_path={}
+        cell=end
+        while cell!=start:
+            finale_path[path[cell]]=cell
+            cell=path[cell]
+        return finale_path
