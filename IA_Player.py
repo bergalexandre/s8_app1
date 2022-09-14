@@ -39,6 +39,7 @@ class IA_Player:
         self.node_matrix = None
         start_x, start_y, end_x, end_y = self.nodify_maze()
         self.path = self.build_tree(start_x, start_y, end_x, end_y)
+        print("")
         
 
     def __del__(self):
@@ -142,8 +143,10 @@ class IA_Player:
     def getNextInstruction(self, walls: list[pygame.Rect], obstacles: list[pygame.Rect], items: list[pygame.Rect], monsters, player, direction):
         self.findPathProlog(walls, player)
 
-        distance_wall, distance_obstacle = self.getClosestPerception(walls, obstacles, items, monsters, player)         
-
+        distance_wall, distance_obstacle = self.getClosestPerception(walls, obstacles, items, monsters, player) 
+                
+        direction =self.getDirection(player) # Algo A star
+        
         match direction:
             case "UP":
                 distance_obstacle = (distance_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
@@ -186,6 +189,23 @@ class IA_Player:
         #        commandes.append("DOWN")
 
         return commandes
+    
+    def getDirection(self, player):
+        current_position = [*player.get_position()]
+        active_coord = (int(np.floor(current_position[1]/50)), int(np.floor(current_position[0]/50)))
+        next_coord = self.path[active_coord]
+        delta=np.asarray(next_coord) - np.asarray(active_coord)
+        if (delta ==[1.0, 0.0]).all():
+                direction= "DOWN"
+        elif (delta ==[-1.0, 0.0]).all():
+                direction= "up"
+        elif (delta ==[0.0, 1.0]).all():
+                direction= "LEFT"
+        elif (delta ==[0.0, -1.0]).all():
+                direction= "RIGHT"
+                      
+        return direction
+        
     
     def nodify_maze(self):
         self.node_matrix = dd(dict)
