@@ -5,8 +5,6 @@ from collections import defaultdict as dd
 from queue import PriorityQueue
 from IA_FuzzyController import *
 import math
-
-
 from Player import Player
 
 class Case:
@@ -25,7 +23,6 @@ class Case:
 class IA_Player:
     prolog_thread = None
     mqi = PrologMQI(output_file_name="output.txt")
-
     maze_tile_size = 1
     
 
@@ -45,49 +42,52 @@ class IA_Player:
     def __del__(self):
         self.mqi.stop()
 
-    def findPathProlog(self, walls: list[pygame.Rect], player: Player):
-        possible_direction = ["north", "south", "east", "west"]
+    def is_direction_free(self, walls: list[pygame.Rect], player: Player, possible_direction = ("DOWN", "UP", "LEFT", "RIGHT"), show_possible_direction = False):
+        free_direction = list(possible_direction)
         for wall in walls:
             wall_query = [*wall.topleft, wall.width, wall.height]
-            player_query = [*player.get_position()]
+            player_query = [*player.get_center()]
 
             if(self.prolog_thread.query(f"is_wall_north({wall_query}, {player_query})")):
-                if("north" in possible_direction):
-                    possible_direction.remove("north")
+                if("UP" in free_direction):
+                    free_direction.remove("UP")
             
             if(self.prolog_thread.query(f"is_wall_south({wall_query}, {player_query})")):
-                if("south" in possible_direction):
-                    possible_direction.remove("south")
+                if("DOWN" in free_direction):
+                    free_direction.remove("DOWN")
 
             if(self.prolog_thread.query(f"is_wall_east({wall_query}, {player_query})")):
-                if("east" in possible_direction):
-                    possible_direction.remove("east")
+                if("LEFT" in free_direction):
+                    free_direction.remove("LEFT")
 
             if(self.prolog_thread.query(f"is_wall_west({wall_query}, {player_query})")):
-                if("west" in possible_direction):
-                    possible_direction.remove("west")
-
-        print(possible_direction)
+                if("RIGHT" in free_direction):
+                    free_direction.remove("RIGHT")
+        
+        if(show_possible_direction):
+            print(free_direction)
+        
+        return free_direction == list(possible_direction)
 
 
     def isWallNorth(self, wall, player):
         wall_query = [*wall.topleft, wall.width, wall.height]
-        player_query = [*player.get_position()]
+        player_query = [*player.get_center()]
         return self.prolog_thread.query(f"is_wall_north({wall_query}, {player_query})")
     
     def isWallSouth(self, wall, player):
         wall_query = [*wall.topleft, wall.width, wall.height]
-        player_query = [*player.get_position()]
+        player_query = [*player.get_center()]
         return self.prolog_thread.query(f"is_wall_south({wall_query}, {player_query})")
     
     def isWallEast(self, wall, player):
         wall_query = [*wall.topleft, wall.width, wall.height]
-        player_query = [*player.get_position()]
+        player_query = [*player.get_center()]
         return self.prolog_thread.query(f"is_wall_east({wall_query}, {player_query})")
 
     def isWallWest(self, wall, player):
         wall_query = [*wall.topleft, wall.width, wall.height]
-        player_query = [*player.get_position()]
+        player_query = [*player.get_center()]
         return self.prolog_thread.query(f"is_wall_west({wall_query}, {player_query})")
 
 
@@ -122,7 +122,7 @@ class IA_Player:
 
         distance_wall_x += ([(wall.topleft[0] + wall.width - player_x)for wall in east_walls])
         distance_wall_x += ([(wall.topleft[0] - player_x)for wall in west_walls])
-        distance_wall_y += ([(wall.topleft[1] + wall.height - player_y)for wall in north_walls])
+        distance_wall_y += ([(wall.topleft[1] + wall.height - player_x)for wall in north_walls])
         distance_wall_y += ([(wall.topleft[1] - player_y)for wall in south_walls])
 
         distance_wall_x = min(distance_wall_x, key=abs)
@@ -140,25 +140,26 @@ class IA_Player:
         return (distance_wall_x, distance_wall_y), (distance_obstacle_x, distance_obstacle_y)
 
 
-    def getNextInstruction(self, walls: list[pygame.Rect], obstacles: list[pygame.Rect], items: list[pygame.Rect], monsters, player, direction):
-        self.findPathProlog(walls, player)
+    def getNextInstruction(self, walls: list[pygame.Rect], obstacles: list[pygame.Rect], items: list[pygame.Rect], monsters, player, direction, show_debug_info):
+        self.is_direction_free(walls, player, show_possible_direction=show_debug_info)
 
         distance_wall, distance_obstacle = self.getClosestPerception(walls, obstacles, items, monsters, player) 
-                
-        direction =self.getDirection(player) # Algo A star
-        
+
         match direction:
             case "UP":
                 distance_obstacle = (distance_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
             case "DOWN":
                 distance_obstacle = (distance_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
             case "LEFT":
-                distance_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size, distance_obstacle[0])
+                distance_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size, distance_obstacle[1])
             case "RIGHT":
-                distance_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size, distance_obstacle[0])
+                distance_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size, distance_obstacle[1])
 
         force_x = self.fuzzy_controller.get_direction(distance_wall[0], distance_obstacle[0])
         force_y = self.fuzzy_controller.get_direction(distance_wall[1], distance_obstacle[1])
+
+        if(show_debug_info):
+            print(f"distance_wall={distance_wall}\ndistance_obstacle({distance_obstacle})\nforces({force_x}, {force_y})\n")
 
         #self.direction_courante = "south"
         commandes = []
@@ -175,9 +176,9 @@ class IA_Player:
         #        commandes.append("LEFT")
         #    elif(self.direction_courante == "west"):
         #        commandes.append("RIGHT")
-        if force_y < -0.005:
+        if force_y < -0.05:
             commandes.append("UP")
-        elif force_y > 0.005:
+        elif force_y > 0.05:
             commandes.append("DOWN")
         else:
             if(direction == "DOWN"  or direction == "UP"):
@@ -190,19 +191,26 @@ class IA_Player:
 
         return commandes
     
-    def getDirection(self, player):
-        current_position = [*player.get_position()]
+    def getDirection(self, player: Player, walls: list[pygame.Rect]):
+        current_position = [*player.get_center()]
         active_coord = (int(np.floor(current_position[1]/50)), int(np.floor(current_position[0]/50)))
         next_coord = self.path[active_coord]
         delta=np.asarray(next_coord) - np.asarray(active_coord)
+
+        direction = None
+
         if (delta ==[1.0, 0.0]).all():
+            if(self.is_direction_free(walls, player, ("DOWN",))): #one value tuple
                 direction= "DOWN"
         elif (delta ==[-1.0, 0.0]).all():
-                direction= "up"
+            if(self.is_direction_free(walls, player, ("UP",))): #one value tuple
+                direction= "UP"
         elif (delta ==[0.0, 1.0]).all():
-                direction= "LEFT"
-        elif (delta ==[0.0, -1.0]).all():
+            if(self.is_direction_free(walls, player, ("RIGHT",))): #one value tuple
                 direction= "RIGHT"
+        elif (delta ==[0.0, -1.0]).all():
+            if(self.is_direction_free(walls, player, ("LEFT",))): #one value tuple
+                direction= "LEFT"
                       
         return direction
         
