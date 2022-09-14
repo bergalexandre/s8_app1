@@ -186,7 +186,6 @@ class App:
                     self.timer += 0.01
             pygame.event.pump()
             keys = pygame.key.get_pressed()
-            #self.on_keyboard_input(keys)
 
             if(keys[K_p]):
                 print(self.player.get_position())
@@ -205,9 +204,12 @@ class App:
             if keys[K_DOWN] or keys[K_s]:
                 direction = "DOWN"
 
-            perceptions = self.maze.make_perception_list(self.player, self._display_surf)
-            instruction = self.ia_player.getNextInstruction(*perceptions, self.player, direction)
-            self.on_AI_input(instruction)
+            perceptions = self.maze.make_perception_list(self.player, keys[K_p])
+            instruction = self.ia_player.getNextInstruction(*perceptions, self.player, direction, keys[K_p])
+            if(keys[K_q]):
+                self.on_keyboard_input(keys)
+            else:
+                self.on_AI_input(instruction)
             
             if self.on_coin_collision():
                 self.score += 1
