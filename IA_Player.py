@@ -42,30 +42,32 @@ class IA_Player:
     def __del__(self):
         self.mqi.stop()
 
-    def findPathProlog(self, walls: list[pygame.Rect], player: Player, show_possible_direction):
-        possible_direction = ["north", "south", "east", "west"]
+    def is_direction_free(self, walls: list[pygame.Rect], player: Player, possible_direction = ("DOWN", "UP", "LEFT", "RIGHT"), show_possible_direction = False):
+        free_direction = list(possible_direction)
         for wall in walls:
             wall_query = [*wall.topleft, wall.width, wall.height]
             player_query = [*player.get_center()]
 
             if(self.prolog_thread.query(f"is_wall_north({wall_query}, {player_query})")):
-                if("north" in possible_direction):
-                    possible_direction.remove("north")
+                if("UP" in free_direction):
+                    free_direction.remove("UP")
             
             if(self.prolog_thread.query(f"is_wall_south({wall_query}, {player_query})")):
-                if("south" in possible_direction):
-                    possible_direction.remove("south")
+                if("DOWN" in free_direction):
+                    free_direction.remove("DOWN")
 
             if(self.prolog_thread.query(f"is_wall_east({wall_query}, {player_query})")):
-                if("east" in possible_direction):
-                    possible_direction.remove("east")
+                if("LEFT" in free_direction):
+                    free_direction.remove("LEFT")
 
             if(self.prolog_thread.query(f"is_wall_west({wall_query}, {player_query})")):
-                if("west" in possible_direction):
-                    possible_direction.remove("west")
+                if("RIGHT" in free_direction):
+                    free_direction.remove("RIGHT")
         
         if(show_possible_direction):
-            print(possible_direction)
+            print(free_direction)
+        
+        return free_direction == list(possible_direction)
 
 
     def isWallNorth(self, wall, player):
@@ -139,12 +141,10 @@ class IA_Player:
 
 
     def getNextInstruction(self, walls: list[pygame.Rect], obstacles: list[pygame.Rect], items: list[pygame.Rect], monsters, player, direction, show_debug_info):
-        self.findPathProlog(walls, player, show_debug_info)
+        self.is_direction_free(walls, player, show_possible_direction=show_debug_info)
 
         distance_wall, distance_obstacle = self.getClosestPerception(walls, obstacles, items, monsters, player) 
-                
-        direction =self.getDirection(player) # Algo A star
-        
+
         match direction:
             case "UP":
                 distance_obstacle = (distance_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
@@ -191,19 +191,26 @@ class IA_Player:
 
         return commandes
     
-    def getDirection(self, player):
-        current_position = [*player.get_position()]
+    def getDirection(self, player: Player, walls: list[pygame.Rect]):
+        current_position = [*player.get_center()]
         active_coord = (int(np.floor(current_position[1]/50)), int(np.floor(current_position[0]/50)))
         next_coord = self.path[active_coord]
         delta=np.asarray(next_coord) - np.asarray(active_coord)
+
+        direction = None
+
         if (delta ==[1.0, 0.0]).all():
+            if(self.is_direction_free(walls, player, ("DOWN",))): #one value tuple
                 direction= "DOWN"
         elif (delta ==[-1.0, 0.0]).all():
-                direction= "up"
+            if(self.is_direction_free(walls, player, ("UP",))): #one value tuple
+                direction= "UP"
         elif (delta ==[0.0, 1.0]).all():
-                direction= "LEFT"
-        elif (delta ==[0.0, -1.0]).all():
+            if(self.is_direction_free(walls, player, ("RIGHT",))): #one value tuple
                 direction= "RIGHT"
+        elif (delta ==[0.0, -1.0]).all():
+            if(self.is_direction_free(walls, player, ("LEFT",))): #one value tuple
+                direction= "LEFT"
                       
         return direction
         
