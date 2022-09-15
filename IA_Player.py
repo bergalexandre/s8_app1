@@ -109,7 +109,7 @@ class IA_Player:
         return np.array(((c, -s), (s, c)))
 
 
-    def getClosestPerception(self, walls: list[pygame.Rect], obstacles: list[pygame.Rect], items: list[pygame.Rect], monsters, player: Player):
+    def getClosestPerception(self, walls: list[pygame.Rect], obstacles: list[pygame.Rect], items: list[pygame.Rect], monsters, player: Player, direction):
         east_walls = list(filter(lambda wall: self.isWallEast(wall, player), walls))
         west_walls = list(filter(lambda wall: self.isWallWest(wall, player), walls))
         north_walls = list(filter(lambda wall: self.isWallNorth(wall, player), walls))
@@ -119,15 +119,15 @@ class IA_Player:
         distance_wall_y = [PERCEPTION_RADIUS*self.maze_tile_size]
 
         player_x, player_y = player.get_center()
+        player_w = player.get_size()[0]/2
 
         distance_wall_x += ([(wall.topleft[0] + wall.width - player_x)for wall in east_walls])
         distance_wall_x += ([(wall.topleft[0] - player_x)for wall in west_walls])
-        distance_wall_y += ([(wall.topleft[1] + wall.height - player_x)for wall in north_walls])
+        distance_wall_y += ([(wall.topleft[1] + wall.height - player_y)for wall in north_walls])
         distance_wall_y += ([(wall.topleft[1] - player_y)for wall in south_walls])
 
         distance_wall_x = min(distance_wall_x, key=abs)
         distance_wall_y = min(distance_wall_y, key=abs)
-
 
         distance_obstacle_x = [PERCEPTION_RADIUS*self.maze_tile_size]
         distance_obstacle_y = [PERCEPTION_RADIUS*self.maze_tile_size]
@@ -137,26 +137,55 @@ class IA_Player:
         distance_obstacle_x = min(distance_obstacle_x, key=abs)
         distance_obstacle_y = min(distance_obstacle_y, key=abs)
 
-        return (distance_wall_x, distance_wall_y), (distance_obstacle_x, distance_obstacle_y)
+        wall_obstacle_x = [PERCEPTION_RADIUS*self.maze_tile_size]
+        wall_obstacle_y = [PERCEPTION_RADIUS*self.maze_tile_size]
+
+        if(direction == "UP"):
+            wall_obstacle_x += ([(wall.centerx - (wall.width/2) - (player_x+player_w)) for wall in north_walls])
+        
+        if(direction == "DOWN"):
+            wall_obstacle_x += ([(wall.centerx + (wall.width/2) - (player_x-player_w)) for wall in south_walls])
+
+        if(direction == "LEFT"):
+            wall_obstacle_y += ([(wall.centery - (wall.height/2) - (player_y+player_w)) for wall in east_walls])
+
+        if(direction == "RIGHT"):
+            wall_obstacle_y += ([(wall.centery + (wall.height/2) - (player_y-player_w)) for wall in west_walls])
+
+        wall_obstacle_x = min(wall_obstacle_x, key=abs)
+        wall_obstacle_y = min(wall_obstacle_y, key=abs)
+
+        return (distance_wall_x, distance_wall_y), (distance_obstacle_x, distance_obstacle_y), (wall_obstacle_x, wall_obstacle_y)
 
 
     def getNextInstruction(self, walls: list[pygame.Rect], obstacles: list[pygame.Rect], items: list[pygame.Rect], monsters, player, direction, show_debug_info):
         self.is_direction_free(walls, player, show_possible_direction=show_debug_info)
 
-        distance_wall, distance_obstacle = self.getClosestPerception(walls, obstacles, items, monsters, player) 
+        distance_wall, distance_obstacle, wall_obstacle = self.getClosestPerception(walls, obstacles, items, monsters, player, direction) 
 
         match direction:
             case "UP":
                 distance_obstacle = (distance_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
+                wall_obstacle = (wall_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
             case "DOWN":
                 distance_obstacle = (distance_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
+                wall_obstacle = (wall_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
             case "LEFT":
                 distance_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size, distance_obstacle[1])
+                wall_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size, wall_obstacle[1])
             case "RIGHT":
                 distance_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size, distance_obstacle[1])
+                wall_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size, wall_obstacle[1])
 
-        force_x = self.fuzzy_controller.get_direction(distance_wall[0], distance_obstacle[0])
-        force_y = self.fuzzy_controller.get_direction(distance_wall[1], distance_obstacle[1])
+        if(direction == "LEFT"  or direction == "RIGHT"):
+            force_x = 0
+        else:
+            force_x = self.fuzzy_controller.get_direction(distance_wall[0], distance_obstacle[0], wall_obstacle[0])
+
+        if(direction == "DOWN"  or direction == "UP"):
+            force_y = 0
+        else:
+            force_y = self.fuzzy_controller.get_direction(distance_wall[1], distance_obstacle[1], wall_obstacle[1])
 
         if(show_debug_info):
             print(f"distance_wall={distance_wall}\ndistance_obstacle({distance_obstacle})\nforces({force_x}, {force_y})\n")
@@ -164,9 +193,9 @@ class IA_Player:
         #self.direction_courante = "south"
         commandes = []
 
-        if force_x > 0.005:
+        if force_x > 0.1:
             commandes.append("RIGHT")
-        elif force_x < -0.005:
+        elif force_x < -0.1:
             commandes.append("LEFT")
         else:
             if(direction == "LEFT"  or direction == "RIGHT"):
@@ -176,9 +205,9 @@ class IA_Player:
         #        commandes.append("LEFT")
         #    elif(self.direction_courante == "west"):
         #        commandes.append("RIGHT")
-        if force_y < -0.05:
+        if force_y < -0.1:
             commandes.append("UP")
-        elif force_y > 0.05:
+        elif force_y > 0.1:
             commandes.append("DOWN")
         else:
             if(direction == "DOWN"  or direction == "UP"):
