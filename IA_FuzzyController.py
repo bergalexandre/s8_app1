@@ -80,20 +80,6 @@ class IA_FuzzyController:
         rules.append(ctrl.Rule(antecedent=((wall["loin_droite"] | wall["moyen_droite"]) & obstacle["milieu"]), consequent=movement["droite"], and_func=np.add))
         rules.append(ctrl.Rule(antecedent=((wall["loin_gauche"] | wall["moyen_gauche"]) & obstacle["milieu"]), consequent=movement["droite"], and_func=np.add))
 
-        #rules.append(ctrl.Rule(antecedent=((wall["loin_gauche"] | wall["moyen_gauche"]) & obstacle["proche_gauche"]), consequent=movement["gauche"]))
-        #rules.append(ctrl.Rule(antecedent=((wall["loin_gauche"] | wall["moyen_gauche"]) & obstacle["proche_droite"]), consequent=movement["gauche"]))
-        #rules.append(ctrl.Rule(antecedent=((wall["loin_gauche"] | wall["moyen_gauche"]) & obstacle["milieu"]), consequent=movement["gauche"])) # (ノ>_<)ノ
-        #rules.append(ctrl.Rule(antecedent=((wall["loin_droite"] | wall["moyen_droite"]) & obstacle["milieu"]), consequent=movement["droite"]))
-        #rules.append(ctrl.Rule(antecedent=((wall["loin_droite"] | wall["moyen_droite"]) & obstacle["proche_droite"]), consequent=movement["droite"]))
-        #rules.append(ctrl.Rule(antecedent=((wall["loin_droite"] | wall["moyen_droite"]) & obstacle["proche_gauche"]), consequent=movement["droite"]))
-
-        #rules.append(ctrl.Rule(antecedent=(wall["proche_gauche"] & obstacle["proche_droite"]), consequent=movement["droite"]))
-        #rules.append(ctrl.Rule(antecedent=(wall["proche_gauche"] & obstacle["proche_gauche"]), consequent=movement["droite"]))
-        #rules.append(ctrl.Rule(antecedent=(wall["proche_gauche"] & obstacle["milieu"]), consequent=movement["droite"]))
-        #rules.append(ctrl.Rule(antecedent=(wall["proche_droite"] & obstacle["milieu"])), consequent=movement["gauche"])
-        #rules.append(ctrl.Rule(antecedent=(wall["proche_droite"] & obstacle["proche_gauche"]), consequent=movement["gauche"]))
-        #rules.append(ctrl.Rule(antecedent=(wall["proche_droite"] & obstacle["proche_droite"]), consequent=movement["gauche"]))
-
         for rule in rules:
             rule.and_func = np.fmin
             rule.or_func = np.fmax

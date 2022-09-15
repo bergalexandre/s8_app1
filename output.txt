@@ -1,0 +1,10 @@
+Warning: c:/source/app1-ia/code_depart/prolog/pathfinder.pl:9:
+Warning:    Singleton variables: [Height]
+Warning: c:/source/app1-ia/code_depart/prolog/pathfinder.pl:13:
+Warning:    Singleton variables: [Height]
+Warning: c:/source/app1-ia/code_depart/prolog/pathfinder.pl:17:
+Warning:    Singleton variables: [Width]
+Warning: c:/source/app1-ia/code_depart/prolog/pathfinder.pl:21:
+Warning:    Singleton variables: [Width]
+Warning: c:/source/app1-ia/code_depart/prolog/pathfinder.pl:25:
+Warning:    Singleton variables: [North]
