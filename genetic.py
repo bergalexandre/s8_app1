@@ -45,9 +45,7 @@ class Genetic:
         self.num_params = num_params
         self.pop_size = pop_size
         self.nbits = nbits
-        self.fitness = np.zeros((self.pop_size, 1))
-        self.fit_fun = np.zeros
-        self.cvalues = np.zeros((self.pop_size, num_params))
+        self.fitness = np.zeros((self.pop_size))
         self.num_generations = 1
         self.mutation_prob = 0
         self.crossover_prob = 0
@@ -59,11 +57,7 @@ class Genetic:
         self.current_gen = 0
         self.crossover_modulo = 0
 
-    def init_pop(self):
-        # Initialize the population as a matrix, where each individual is a binary string.
-        # Output:
-        # - POPULATION, a binary matrix whose rows correspond to encoded individuals.
-        self.population = np.zeros((self.pop_size, self.num_params * self.nbits))
+        self.population = np.random.randint(2, size=(self.pop_size, self.num_params * self.nbits))
 
     def set_fit_fun(self, fun):
         # Set the fitness function
@@ -90,10 +84,11 @@ class Genetic:
         # Evaluate the fitness function
         # Record the best individual and average of the current generation
         # WARNING, number of arguments need to be adjusted if fitness function changes
-        self.fitness = self.fit_fun(self.cvalues[:, 0], self.cvalues[:, 1])
-        if np.max(self.fitness) > self.bestIndividualFitness:
-            self.bestIndividualFitness = np.max(self.fitness)
-            self.bestIndividual = self.population[self.fitness == np.max(self.fitness)][0]
+
+        #if np.max(self.fitness) > self.bestIndividualFitness:
+        self.bestIndividualFitness = np.max(self.fitness)
+        self.bestIndividual = self.population[self.fitness == np.max(self.fitness)][0]
+
         self.maxFitnessRecord[self.current_gen] = np.max(self.fitness)
         self.overallMaxFitnessRecord[self.current_gen] = self.bestIndividualFitness
         self.avgMaxFitnessRecord[self.current_gen] = np.mean(self.fitness)
@@ -118,6 +113,7 @@ class Genetic:
         # Output:
         # - POPULATION, a binary matrix with each row encoding an individual.
         # TODO: encode individuals into binary vectors
+        
         self.population = np.zeros((self.pop_size, self.num_params * self.nbits))
 
     def decode_individuals(self):
@@ -128,7 +124,8 @@ class Genetic:
         # Output:
         # - CVALUES, a vector of continuous values representing the parameters.
         # TODO: decode individuals from binary vectors
-        self.cvalues = np.zeros((self.pop_size, self.num_params))
+
+        return bin2ufloat(np.reshape(self.population, (self.pop_size, self.num_params, self.nbits)), self.nbits)
 
     def doSelection(self):
         # Select pairs of individuals from the population.
@@ -138,10 +135,13 @@ class Genetic:
         # - NUMPAIRS, the number of pairs of individual to generate.
         # Output:
         # - PAIRS, a list of two ndarrays [IND1 IND2]  each encoding one member of the pair
-        # TODO: select pairs of individual in the population
-        idx1 = np.random.randint(0, self.pop_size, (int(self.pop_size/2),))
-        idx2 = np.random.randint(0, self.pop_size, (int(self.pop_size/2),))
-        return [self.population[idx1, :], self.population[idx2, :]]
+
+        selection_probability = np.ones(self.pop_size)/self.pop_size if(np.sum(self.fitness) == 0) else self.fitness/np.sum(self.fitness)
+
+        selected_individu1 = np.random.choice(self.pop_size, int(self.pop_size/2), p=selection_probability)
+        selected_individu2 = np.random.choice(self.pop_size, int(self.pop_size/2), p=selection_probability)
+        
+        return (self.population[selected_individu1,:], self.population[selected_individu2,:])
 
     def doCrossover(self, pairs):
         # Perform a crossover operation between two individuals, with a given probability
@@ -155,8 +155,15 @@ class Genetic:
         # Output:
         # - POPULATION, a binary matrix with each row encoding an individual.
         # TODO: Perform a crossover between two individuals
-        halfpop1 = pairs[0]
-        halfpop2 = pairs[1]
+        
+        selection_probability = np.repeat(np.random.rand((int(self.pop_size/2))), self.nbits*self.num_params)
+        selection_probability = np.reshape(selection_probability, (500, 132))
+        crossover_pop = np.where(np.repeat(self.crossover_modulo, self.num_params), pairs[0][:], pairs[1][:])
+        halfpop1 = np.where((selection_probability > self.crossover_prob), crossover_pop, pairs[0])
+        
+        crossover_pop = np.where(np.repeat(self.crossover_modulo, self.num_params), pairs[1][:], pairs[0][:])
+        halfpop2 = np.where((selection_probability > self.crossover_prob), crossover_pop, pairs[1])
+        
         return np.vstack((halfpop1, halfpop2))
 
     def doMutation(self):
@@ -167,7 +174,10 @@ class Genetic:
         # Output:
         # - POPULATION, the new population.
         # TODO: Apply mutation to the population
-        self.population =  np.zeros((self.pop_size, self.num_params * self.nbits))
+        chance_to_not_mutate = 1 - self.mutation_prob
+        randomMutatedPopulation = np.random.rand(self.pop_size, self.num_params * self.nbits)
+        mutated_population = (self.population + (randomMutatedPopulation > chance_to_not_mutate))%2
+        return mutated_population
 
     def new_gen(self):
         # Perform a the pair selection, crossover and mutation and
@@ -178,7 +188,7 @@ class Genetic:
         # - POPULATION, the new population.
         pairs = self.doSelection()
         self.population = self.doCrossover(pairs)
-        self.doMutation()
+        self.population = self.doMutation()
         self.current_gen += 1
 
 

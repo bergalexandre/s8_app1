@@ -5,6 +5,7 @@ from Player import *
 from Maze import *
 from Constants import *
 from IA_Player import *
+from genetic import Genetic
 
 class App:
     windowWidth = WIDTH
@@ -24,6 +25,9 @@ class App:
         self.timer = 0.0
         self.player = Player()
         self.maze = Maze(mazefile)
+        self.genetic = Genetic(NUM_ATTRIBUTES, 1000, 11)
+        self.genetic.set_crossover_modulo(np.array([0,0,0,0,0,1,1,1,1,1,1]))
+        self.genetic.set_sim_parameters(500, 0.11, 0.8)
 
     def on_init(self):
         pygame.init()
@@ -40,6 +44,27 @@ class App:
         self._image_surf = pygame.transform.scale(self._image_surf, self.player.get_size())
         self._block_surf = pygame.image.load("assets/wall.png")
         self.ia_player = IA_Player(max(self.maze.tile_size_x, self.maze.tile_size_y), self.maze)
+
+    def genetic_loop(self):
+        population_fitness = []
+
+        victory = False
+        while victory == False:
+            for individu in self.genetic.decode_individuals():
+                number_of_wins = 0
+                for monster in self.maze.monsterList:
+                    number_of_wins = (monster.mock_fight(individu))
+                
+                population_fitness.append(number_of_wins)
+
+            self.genetic.fitness = np.array(number_of_wins)
+            self.genetic.eval_fit()
+
+            print(f"generation {self.genetic.current_gen}:")
+            print(f"\tbest fitness: {self.genetic.bestIndividualFitness}")
+            print(f"\ttotal fitness: {np.sum(self.genetic.fitness)}")
+
+            self.genetic.new_gen()
 
     def on_keyboard_input(self, keys):
         if keys[K_RIGHT] or keys[K_d]:
