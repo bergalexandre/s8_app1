@@ -30,6 +30,8 @@
 # Adapted by Audrey Corbeil Therrien for Artificial Intelligence module
 import numpy as np
 
+from Constants import MAX_ATTRIBUTE
+
 
 class Genetic:
     num_params = 0
@@ -157,7 +159,7 @@ class Genetic:
         # TODO: Perform a crossover between two individuals
         
         selection_probability = np.repeat(np.random.rand((int(self.pop_size/2))), self.nbits*self.num_params)
-        selection_probability = np.reshape(selection_probability, (500, 132))
+        selection_probability = np.reshape(selection_probability, (int(self.pop_size/2), self.nbits*self.num_params))
         crossover_pop = np.where(np.repeat(self.crossover_modulo, self.num_params), pairs[0][:], pairs[1][:])
         halfpop1 = np.where((selection_probability > self.crossover_prob), crossover_pop, pairs[0])
         
@@ -241,4 +243,4 @@ def bin2ufloat(bvalue, nbits):
         raise Exception('Maximum number of bits limited to 64')
     ivalue = np.sum(bvalue * (2**np.arange(nbits)[np.newaxis, :]), axis=-1)
     cvalue = ivalue / (2**nbits - 1)
-    return cvalue
+    return (cvalue*2*MAX_ATTRIBUTE - MAX_ATTRIBUTE)
