@@ -25,9 +25,9 @@ class App:
         self.timer = 0.0
         self.player = Player()
         self.maze = Maze(mazefile)
-        self.genetic = Genetic(NUM_ATTRIBUTES, 1000, 11)
-        self.genetic.set_crossover_modulo(np.array([0,0,0,0,0,1,1,1,1,1,1]))
-        self.genetic.set_sim_parameters(500, 0.11, 0.8)
+        self.genetic = Genetic(NUM_ATTRIBUTES, 10000, 13)
+        self.genetic.set_crossover_modulo(np.array([0,0,0,0,0,1,1,1,1,1,1,1,1]))
+        self.genetic.set_sim_parameters(5000, 0.11, 0.8)
 
     def on_init(self):
         pygame.init()
@@ -46,18 +46,20 @@ class App:
         self.ia_player = IA_Player(max(self.maze.tile_size_x, self.maze.tile_size_y), self.maze)
 
     def genetic_loop(self):
-        population_fitness = []
+        
 
         victory = False
         while victory == False:
+            population_fitness = []
             for individu in self.genetic.decode_individuals():
                 number_of_wins = 0
                 for monster in self.maze.monsterList:
-                    number_of_wins = (monster.mock_fight(individu))
+                    self.player.set_attributes(individu)
+                    number_of_wins += (monster.mock_fight(self.player))
                 
                 population_fitness.append(number_of_wins)
 
-            self.genetic.fitness = np.array(number_of_wins)
+            self.genetic.fitness = np.array(population_fitness)
             self.genetic.eval_fit()
 
             print(f"generation {self.genetic.current_gen}:")
