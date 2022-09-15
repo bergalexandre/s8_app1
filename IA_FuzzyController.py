@@ -78,7 +78,7 @@ class IA_FuzzyController:
         rules.append(ctrl.Rule(antecedent=(obstacle["proche_gauche"] & (~wall["proche_droite"] | ~wall["moyen_droite"])), consequent=movement["droite"]))
 
         rules.append(ctrl.Rule(antecedent=((wall["loin_droite"] | wall["moyen_droite"]) & obstacle["milieu"]), consequent=movement["droite"], and_func=np.add))
-        rules.append(ctrl.Rule(antecedent=((wall["loin_gauche"] | wall["moyen_gauche"]) & obstacle["milieu"]), consequent=movement["droite"], and_func=np.add))
+        rules.append(ctrl.Rule(antecedent=((wall["loin_gauche"] | wall["moyen_gauche"]) & obstacle["milieu"]), consequent=movement["gauche"], and_func=np.add))
 
         for rule in rules:
             rule.and_func = np.fmin
