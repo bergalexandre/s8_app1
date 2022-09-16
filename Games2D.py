@@ -26,8 +26,8 @@ class App:
         self.player = Player()
         self.maze = Maze(mazefile)
         self.genetic = Genetic(NUM_ATTRIBUTES, 1000, 11)
-        self.genetic.set_crossover_modulo(np.array([1,0,1,0,1,0,1,0,1,0,1,]))
-        self.genetic.set_sim_parameters(5000, 0.1, 0.8)
+        self.genetic.set_crossover_modulo(np.array([0,0,1,0,0,1,1,1,1,0,0]))
+        self.genetic.set_sim_parameters(5000, 0.7, 0.8)
 
     def on_init(self):
         pygame.init()
@@ -48,20 +48,25 @@ class App:
     def genetic_loop(self):
         for _ in range(self.genetic.num_generations):
             population_fitness = []
+            population_win = []
             for individu in self.genetic.decode_individuals():
                 number_of_wins = 0
+                fitness = 0
                 for monster in self.maze.monsterList:
                     self.player.set_attributes(individu)
-                    number_of_wins += (((monster.mock_fight(self.player)[1])))
+                    fight = monster.mock_fight(self.player)[0]
+                    number_of_wins += fight
+                    fitness += 10**fight if fight > 0 else 0
                 
-                population_fitness.append(number_of_wins)
+                population_fitness.append(fitness)
+                population_win.append(number_of_wins)
 
             self.genetic.fitness = np.array(population_fitness)
             self.genetic.eval_fit()
 
             print(f"generation {self.genetic.current_gen}:")
-            print(f"\tbest fitness: {self.genetic.bestIndividualFitness}")
-            print(f"\tavg fitness: {np.sum(self.genetic.fitness)/1000}")
+            print(f"\tbest fitness: {max(population_win)}")
+            print(f"\tavg fitness: {np.sum(population_win)/1000}")
 
             self.genetic.new_gen()
         self.player.set_attributes(bin2ufloat(np.reshape(self.genetic.bestIndividual, (NUM_ATTRIBUTES, -1)), 11))

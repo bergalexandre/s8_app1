@@ -158,13 +158,13 @@ class Genetic:
         # - POPULATION, a binary matrix with each row encoding an individual.
         # TODO: Perform a crossover between two individuals
         
-        selection_probability = np.repeat(np.random.rand((int(self.pop_size/2))), self.nbits*self.num_params)
-        selection_probability = np.reshape(selection_probability, (int(self.pop_size/2), self.nbits*self.num_params))
-        crossover_pop = np.where(np.repeat(self.crossover_modulo, self.num_params), pairs[0][:], pairs[1][:])
-        halfpop1 = np.where((selection_probability > self.crossover_prob), crossover_pop, pairs[0])
+        selection_probability = np.random.rand((int(self.pop_size)))
+        selection_probability = np.reshape(np.repeat(selection_probability < self.crossover_prob, self.nbits*self.num_params), (self.pop_size, self.nbits*self.num_params))
+        crossover_pop = np.where(np.tile(self.crossover_modulo, self.num_params), pairs[0][:], pairs[1][:])
+        halfpop1 = np.where((selection_probability[:int(self.pop_size/2)]), crossover_pop, pairs[0])
         
-        crossover_pop = np.where(np.repeat(self.crossover_modulo, self.num_params), pairs[1][:], pairs[0][:])
-        halfpop2 = np.where((selection_probability > self.crossover_prob), crossover_pop, pairs[1])
+        crossover_pop = np.where(np.tile(self.crossover_modulo, self.num_params), pairs[1][:], pairs[0][:])
+        halfpop2 = np.where((selection_probability[int(self.pop_size/2):]), crossover_pop, pairs[1])
         
         return np.vstack((halfpop1, halfpop2))
 
@@ -176,10 +176,21 @@ class Genetic:
         # Output:
         # - POPULATION, the new population.
         # TODO: Apply mutation to the population
-        chance_to_not_mutate = 1 - self.mutation_prob
-        randomMutatedPopulation = np.random.rand(self.pop_size, self.num_params * self.nbits)
-        mutated_population = (self.population + (randomMutatedPopulation > chance_to_not_mutate))%2
-        return mutated_population
+        selection_probability = np.random.rand((int(self.pop_size)))
+        #bit_to_mutate = np.random.randint(11, size=self.pop_size)
+        #selection_probability = np.reshape(np.repeat(selection_probability < self.mutation_prob, self.nbits*self.num_params), (self.pop_size, self.nbits*self.num_params))
+        
+        randomMutatedPopulation = np.random.rand(self.pop_size, self.num_params * self.nbits)        
+        #randomMutatedPopulation = np.zeros(self.population.shape)
+        #for index, value in np.ndenumerate(bit_to_mutate):
+        #    vector = np.zeros((self.nbits,))
+        #    vector[value] = 1
+        #    randomMutatedPopulation[index] = np.tile(vector, self.num_params)
+            
+        self.population[selection_probability < self.mutation_prob] = (self.population[selection_probability < self.mutation_prob] + ((randomMutatedPopulation[selection_probability < self.mutation_prob] > 0.3)))%2
+        #mutated_population = self.population
+        #mutated_population = (self.population + (randomMutatedPopulation))%2
+        return self.population
 
     def new_gen(self):
         # Perform a the pair selection, crossover and mutation and
