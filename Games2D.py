@@ -53,6 +53,7 @@ class App:
                 number_of_wins = 0
                 fitness = 0
                 for monster in self.maze.monsterList:
+                    TEST = monster.mock_fight(self.player)
                     self.player.set_attributes(individu)
                     fight = monster.mock_fight(self.player)[0]
                     number_of_wins += fight
@@ -235,6 +236,7 @@ class App:
                 self.score += 1
             if self.on_treasure_collision():
                 self.score += 10
+                self.ia_player.FIND_TREASURE = False
             monster = self.on_monster_collision()
             if monster:
                 if monster.fight(self.player):
