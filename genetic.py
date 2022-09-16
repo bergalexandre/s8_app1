@@ -87,9 +87,9 @@ class Genetic:
         # Record the best individual and average of the current generation
         # WARNING, number of arguments need to be adjusted if fitness function changes
 
-        #if np.max(self.fitness) > self.bestIndividualFitness:
-        self.bestIndividualFitness = np.max(self.fitness)
-        self.bestIndividual = self.population[self.fitness == np.max(self.fitness)][0]
+        if np.max(self.fitness) > self.bestIndividualFitness:
+            self.bestIndividualFitness = np.max(self.fitness)
+            self.bestIndividual = self.population[self.fitness == np.max(self.fitness)][0]
 
         self.maxFitnessRecord[self.current_gen] = np.max(self.fitness)
         self.overallMaxFitnessRecord[self.current_gen] = self.bestIndividualFitness

@@ -5,7 +5,7 @@ from Player import *
 from Maze import *
 from Constants import *
 from IA_Player import *
-from genetic import Genetic
+from genetic import Genetic, bin2ufloat
 
 class App:
     windowWidth = WIDTH
@@ -25,9 +25,9 @@ class App:
         self.timer = 0.0
         self.player = Player()
         self.maze = Maze(mazefile)
-        self.genetic = Genetic(NUM_ATTRIBUTES, 10000, 13)
-        self.genetic.set_crossover_modulo(np.array([0,0,0,0,0,1,1,1,1,1,1,1,1]))
-        self.genetic.set_sim_parameters(5000, 0.11, 0.8)
+        self.genetic = Genetic(NUM_ATTRIBUTES, 50, 11)
+        self.genetic.set_crossover_modulo(np.array([0,0,0,0,0,1,1,1,1,1,1]))
+        self.genetic.set_sim_parameters(50, 0.11, 0.7)
 
     def on_init(self):
         pygame.init()
@@ -46,16 +46,13 @@ class App:
         self.ia_player = IA_Player(max(self.maze.tile_size_x, self.maze.tile_size_y), self.maze)
 
     def genetic_loop(self):
-        
-
-        victory = False
-        while victory == False:
+        for _ in range(self.genetic.num_generations):
             population_fitness = []
             for individu in self.genetic.decode_individuals():
                 number_of_wins = 0
                 for monster in self.maze.monsterList:
                     self.player.set_attributes(individu)
-                    number_of_wins += (monster.mock_fight(self.player))
+                    number_of_wins += monster.mock_fight(self.player)[0]
                 
                 population_fitness.append(number_of_wins)
 
@@ -64,9 +61,10 @@ class App:
 
             print(f"generation {self.genetic.current_gen}:")
             print(f"\tbest fitness: {self.genetic.bestIndividualFitness}")
-            print(f"\ttotal fitness: {np.sum(self.genetic.fitness)}")
+            print(f"\tavg fitness: {np.sum(self.genetic.fitness)/10}")
 
             self.genetic.new_gen()
+        self.player.set_attributes(bin2ufloat(np.reshape(self.genetic.bestIndividual, (NUM_ATTRIBUTES, -1)), 11))
 
     def on_keyboard_input(self, keys):
         if keys[K_RIGHT] or keys[K_d]:
@@ -203,6 +201,7 @@ class App:
 
     def on_execute(self):
         self.on_init()
+        self.genetic_loop()
 
         direction = None
 
