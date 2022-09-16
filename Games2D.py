@@ -27,7 +27,7 @@ class App:
         self.maze = Maze(mazefile)
         self.genetic = Genetic(NUM_ATTRIBUTES, 1000, 11)
         self.genetic.set_crossover_modulo(np.array([0,0,1,0,0,1,1,1,1,0,0]))
-        self.genetic.set_sim_parameters(5000, 0.7, 0.8)
+        self.genetic.set_sim_parameters(1, 0.7, 0.8)
 
     def on_init(self):
         pygame.init()

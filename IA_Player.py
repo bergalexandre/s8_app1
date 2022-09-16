@@ -41,8 +41,8 @@ class IA_Player:
         
         self.maze = maze.maze
         self.node_matrix = None
-        start, end = self.nodify_maze()
-        self.path = self.build_tree(start, end)
+        start, self.end = self.nodify_maze()
+        self.path = self.build_tree(start, self.end)
         
         # Pour trésor
         self.FIND_TREASURE = False
@@ -163,6 +163,15 @@ class IA_Player:
         obstacle["UP"] = self.find_closest_of_axis(distance_obstacle, 1, lambda y: True)
         obstacle["DOWN"] = self.find_closest_of_axis(distance_obstacle, 1, lambda y: True)
 
+        dist_item = [[PERCEPTION_RADIUS*self.maze_tile_size[0], PERCEPTION_RADIUS*self.maze_tile_size[1]]]
+        dist_item += [(np.array(item.center) - [player_x, player_y]).tolist() for item in items]
+
+        item = {}
+        item["LEFT"] = self.find_closest_of_axis(dist_item, 0, lambda x: True)
+        item["RIGHT"] = self.find_closest_of_axis(dist_item, 0, lambda x: True)
+        item["UP"] = self.find_closest_of_axis(dist_item, 1, lambda y: True)
+        item["DOWN"] = self.find_closest_of_axis(dist_item, 1, lambda y: True)
+
         bloqueur_consigne = {
             "LEFT": [PERCEPTION_RADIUS*self.maze_tile_size[0], PERCEPTION_RADIUS*self.maze_tile_size[1]], 
             "RIGHT": [PERCEPTION_RADIUS*self.maze_tile_size[0], PERCEPTION_RADIUS*self.maze_tile_size[1]], 
@@ -177,13 +186,13 @@ class IA_Player:
             bloqueur_consigne["LEFT"] = obstacle[direction]
             bloqueur_consigne["RIGHT"] = obstacle[direction]
 
-        return distance_wall, obstacle, bloqueur_consigne
+        return distance_wall, obstacle, bloqueur_consigne, item
 
 
     def getNextInstruction(self, walls: list[pygame.Rect], obstacles: list[pygame.Rect], items: list[pygame.Rect], monsters, player, direction, show_debug_info):
         self.is_direction_free(walls, player, show_possible_direction=show_debug_info)
 
-        wall, obstacle, bloqueur_consigne = self.getClosestPerception(walls, obstacles, items, monsters, player, direction) 
+        wall, obstacle, bloqueur_consigne, item = self.getClosestPerception(walls, obstacles, items, monsters, player, direction) 
         
         consigne = { "UP": 0, "DOWN": 0, "LEFT": 0, "RIGHT": 0 }
 
@@ -209,6 +218,7 @@ class IA_Player:
             obstacle["RIGHT"][1], 
             bloqueur_consigne["RIGHT"][1],
             bloqueur_consigne["RIGHT"][0],
+            item["RIGHT"][0],
             consigne["RIGHT"]
         )
         forces["DOWN"] = self.fuzzy_controller["DOWN"].get_direction(
@@ -220,6 +230,7 @@ class IA_Player:
             obstacle["DOWN"][0], 
             bloqueur_consigne["DOWN"][1],
             bloqueur_consigne["DOWN"][0],
+            item["DOWN"][1],
             consigne["DOWN"]
         )
         
@@ -270,6 +281,8 @@ class IA_Player:
     
     def getPath(self, active_coord):
         
+        if(len(self.all_goals) == 0):
+            self.all_goals = np.array([self.end])
         closest_goal = np.argmin([(active_coord[0]-i[0])**2+(active_coord[1]-i[1])**2 for i in self.all_goals])
 
         if self.FIND_TREASURE == False:

@@ -18,6 +18,7 @@ class IA_FuzzyController2:
         obstacle_y = ctrl.Antecedent(np.linspace(-perception_distance, perception_distance, 1000), 'obstacle_y')
         bloqueur_consigne_x = ctrl.Antecedent(np.linspace(-perception_distance, perception_distance, 1000), 'bloqueur_consigne_x')
         bloqueur_consigne_y = ctrl.Antecedent(np.linspace(-perception_distance, perception_distance, 1000), 'bloqueur_consigne_y')
+        tresor_x = ctrl.Antecedent(np.linspace(-perception_distance, perception_distance, 1000), 'tresor_x')
 
         greediness = ctrl.Antecedent(np.linspace(0, perception_distance, 1000), 'greedy_x')
 
@@ -50,6 +51,12 @@ class IA_FuzzyController2:
         obstacle_y["loin_d"] = fuzz.trapmf(obstacle_y.universe, [perception_distance*0.4, perception_distance*0.5, perception_distance, perception_distance])
         #obstacle_y["loin_opp"] = fuzz.trapmf(obstacle_y.universe, [-perception_distance, -perception_distance, -perception_distance*0.3, 0])
 
+        tresor_x["aucun_g"] = fuzz.trapmf(obstacle_y.universe, [-perception_distance, -perception_distance, -perception_distance*0.99, -perception_distance*0.98])
+        tresor_x["loin_g"] = fuzz.trapmf(obstacle_y.universe, [-perception_distance*0.99, -perception_distance*0.98, -perception_distance*0.15, -perception_distance*0.10])
+        tresor_x["dessus"] = fuzz.trapmf(obstacle_y.universe, [-perception_distance*0.15, -perception_distance*0.1, perception_distance*0.1, perception_distance*0.15])
+        tresor_x["loin_d"] = fuzz.trapmf(obstacle_y.universe, [perception_distance*0.1, perception_distance*0.15, perception_distance*0.98, perception_distance*0.99])
+        tresor_x["aucun_d"] = fuzz.trapmf(obstacle_y.universe, [perception_distance*0.98, perception_distance*0.99, perception_distance, perception_distance])
+
         #obstacle ou mur proche dans la direction de la consigne
         bloqueur_consigne_x["libre"] = fuzz.trapmf(bloqueur_consigne_x.universe, [perception_distance*0.25, perception_distance*0.35, perception_distance, perception_distance])
         bloqueur_consigne_x["obstruction"] = fuzz.trapmf(bloqueur_consigne_x.universe, [-perception_distance, -perception_distance, perception_distance*0.17, perception_distance*0.3])
@@ -67,8 +74,8 @@ class IA_FuzzyController2:
         #rules
         rules = []
 
-        rules.append(ctrl.Rule(consigne["active"], consequent=movement["avance"]%2))
-        rules.append(ctrl.Rule(consigne["inverse"], consequent=movement["recule"]%2))
+        rules.append(ctrl.Rule(consigne["active"] & (tresor_x["dessus"] | tresor_x["aucun_g"] | tresor_x["aucun_d"]), consequent=movement["avance"]%2))
+        rules.append(ctrl.Rule(consigne["inverse"] & (tresor_x["dessus"] | tresor_x["aucun_g"] | tresor_x["aucun_d"]), consequent=movement["recule"]%2))
 
         rules.append(ctrl.Rule((wall_x["proche"] & wall_y["proche"]), consequent=movement["recule"]))
         rules.append(ctrl.Rule((wall_x["moyen"] & wall_y["proche"]), consequent=movement["recule"]%0.5))
@@ -77,6 +84,9 @@ class IA_FuzzyController2:
 
         rules.append(ctrl.Rule((obstacle_x["proche_d"] & (obstacle_y["proche_d"] | obstacle_y["proche_g"]) & consigne["inactive"]), consequent=movement["recule"]))
         rules.append(ctrl.Rule((obstacle_x["proche_g"] & (obstacle_y["proche_d"] | obstacle_y["proche_g"]) & consigne["inactive"]), consequent=movement["avance"]))
+
+        rules.append(ctrl.Rule((tresor_x["loin_d"]), consequent=movement["avance"]))
+        rules.append(ctrl.Rule((tresor_x["loin_g"]), consequent=movement["recule"]))
 
         rules.append(ctrl.Rule((bloqueur_consigne_y["obstruction"] & bloqueur_consigne_x["obstruction"]), consequent=movement["reste"]))
         rules.append(ctrl.Rule(antecedent=(consigne["inactive"] & 
@@ -126,7 +136,7 @@ class IA_FuzzyController2:
             var.view()
         plt.show()
 
-    def get_direction(self, wall_x, wall_y, wall_opp_x, wall_opp_y, obstacle_x, obstacle_y, bloqueur_consigne_x, bloqueur_consigne_y, consigne):
+    def get_direction(self, wall_x, wall_y, wall_opp_x, wall_opp_y, obstacle_x, obstacle_y, bloqueur_consigne_x, bloqueur_consigne_y, tresor_x, consigne):
         self.sim.input["wall_x"] = wall_x
         self.sim.input["wall_y"] = wall_y
         self.sim.input["wall_opp_x"] = wall_opp_x
@@ -135,6 +145,7 @@ class IA_FuzzyController2:
         self.sim.input["obstacle_y"] = obstacle_y
         self.sim.input["bloqueur_consigne_x"] = bloqueur_consigne_x
         self.sim.input["bloqueur_consigne_y"] = bloqueur_consigne_y
+        self.sim.input["tresor_x"] = tresor_x
         self.sim.input["consigne"] = consigne
 
         self.sim.compute()
