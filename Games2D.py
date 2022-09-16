@@ -25,9 +25,9 @@ class App:
         self.timer = 0.0
         self.player = Player()
         self.maze = Maze(mazefile)
-        self.genetic = Genetic(NUM_ATTRIBUTES, 50, 11)
-        self.genetic.set_crossover_modulo(np.array([0,0,0,0,0,1,1,1,1,1,1]))
-        self.genetic.set_sim_parameters(50, 0.11, 0.7)
+        self.genetic = Genetic(NUM_ATTRIBUTES, 1000, 11)
+        self.genetic.set_crossover_modulo(np.array([1,0,1,0,1,0,1,0,1,0,1,]))
+        self.genetic.set_sim_parameters(5000, 0.1, 0.8)
 
     def on_init(self):
         pygame.init()
@@ -43,7 +43,7 @@ class App:
         self.player.set_size(PLAYER_SIZE*self.maze.tile_size_x, PLAYER_SIZE*self.maze.tile_size_x)
         self._image_surf = pygame.transform.scale(self._image_surf, self.player.get_size())
         self._block_surf = pygame.image.load("assets/wall.png")
-        self.ia_player = IA_Player(max(self.maze.tile_size_x, self.maze.tile_size_y), self.maze)
+        self.ia_player = IA_Player((self.maze.tile_size_x, self.maze.tile_size_y), self.maze)
 
     def genetic_loop(self):
         for _ in range(self.genetic.num_generations):
@@ -52,7 +52,7 @@ class App:
                 number_of_wins = 0
                 for monster in self.maze.monsterList:
                     self.player.set_attributes(individu)
-                    number_of_wins += monster.mock_fight(self.player)[0]
+                    number_of_wins += (((monster.mock_fight(self.player)[1])))
                 
                 population_fitness.append(number_of_wins)
 
@@ -61,7 +61,7 @@ class App:
 
             print(f"generation {self.genetic.current_gen}:")
             print(f"\tbest fitness: {self.genetic.bestIndividualFitness}")
-            print(f"\tavg fitness: {np.sum(self.genetic.fitness)/10}")
+            print(f"\tavg fitness: {np.sum(self.genetic.fitness)/1000}")
 
             self.genetic.new_gen()
         self.player.set_attributes(bin2ufloat(np.reshape(self.genetic.bestIndividual, (NUM_ATTRIBUTES, -1)), 11))

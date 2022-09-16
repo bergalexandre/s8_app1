@@ -29,7 +29,8 @@ class IA_Player:
     def __init__(self, maze_tile_size, maze):
         self.prolog_thread = self.mqi.create_thread()
         self.prolog_thread.query("[prolog/pathfinder]")
-        self.fuzzy_controller = IA_FuzzyController(maze_tile_size)
+        self.fuzzy_controller_hautbas = IA_FuzzyController(maze_tile_size[0])
+        self.fuzzy_controller_gauchedroite = IA_FuzzyController(maze_tile_size[1])
         self.maze_tile_size = maze_tile_size
         
         self.maze = maze.maze
@@ -115,8 +116,8 @@ class IA_Player:
         north_walls = list(filter(lambda wall: self.isWallNorth(wall, player), walls))
         south_walls = list(filter(lambda wall: self.isWallSouth(wall, player), walls))
 
-        distance_wall_x = [PERCEPTION_RADIUS*self.maze_tile_size]
-        distance_wall_y = [PERCEPTION_RADIUS*self.maze_tile_size]
+        distance_wall_x = [PERCEPTION_RADIUS*self.maze_tile_size[0]]
+        distance_wall_y = [PERCEPTION_RADIUS*self.maze_tile_size[1]]
 
         player_x, player_y = player.get_center()
         player_w = player.get_size()[0]/2
@@ -129,16 +130,16 @@ class IA_Player:
         distance_wall_x = min(distance_wall_x, key=abs)
         distance_wall_y = min(distance_wall_y, key=abs)
 
-        distance_obstacle_x = [PERCEPTION_RADIUS*self.maze_tile_size]
-        distance_obstacle_y = [PERCEPTION_RADIUS*self.maze_tile_size]
+        distance_obstacle_x = [PERCEPTION_RADIUS*self.maze_tile_size[0]]
+        distance_obstacle_y = [PERCEPTION_RADIUS*self.maze_tile_size[1]]
         distance_obstacle_x += ([(obstacle.centerx - player_x)for obstacle in obstacles])
         distance_obstacle_y += ([(obstacle.centery - player_y)for obstacle in obstacles])
 
         distance_obstacle_x = min(distance_obstacle_x, key=abs)
         distance_obstacle_y = min(distance_obstacle_y, key=abs)
 
-        wall_obstacle_x = [PERCEPTION_RADIUS*self.maze_tile_size]
-        wall_obstacle_y = [PERCEPTION_RADIUS*self.maze_tile_size]
+        wall_obstacle_x = [PERCEPTION_RADIUS*self.maze_tile_size[0]]
+        wall_obstacle_y = [PERCEPTION_RADIUS*self.maze_tile_size[1]]
 
         if(direction == "UP"):
             wall_obstacle_x += ([(wall.centerx - (wall.width/2) - (player_x+player_w)) for wall in north_walls])
@@ -165,27 +166,27 @@ class IA_Player:
 
         match direction:
             case "UP":
-                distance_obstacle = (distance_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
-                wall_obstacle = (wall_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
+                distance_obstacle = (distance_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size[0])
+                wall_obstacle = (wall_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size[0])
             case "DOWN":
-                distance_obstacle = (distance_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
-                wall_obstacle = (wall_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
+                distance_obstacle = (distance_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size[0])
+                wall_obstacle = (wall_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size[0])
             case "LEFT":
-                distance_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size, distance_obstacle[1])
-                wall_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size, wall_obstacle[1])
+                distance_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size[1], distance_obstacle[1])
+                wall_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size[1], wall_obstacle[1])
             case "RIGHT":
-                distance_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size, distance_obstacle[1])
-                wall_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size, wall_obstacle[1])
+                distance_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size[1], distance_obstacle[1])
+                wall_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size[1], wall_obstacle[1])
 
         if(direction == "LEFT"  or direction == "RIGHT"):
             force_x = 0
         else:
-            force_x = self.fuzzy_controller.get_direction(distance_wall[0], distance_obstacle[0], wall_obstacle[0])
+            force_x = self.fuzzy_controller_gauchedroite.get_direction(distance_wall[0], distance_obstacle[0], wall_obstacle[0])
 
         if(direction == "DOWN"  or direction == "UP"):
             force_y = 0
         else:
-            force_y = self.fuzzy_controller.get_direction(distance_wall[1], distance_obstacle[1], wall_obstacle[1])
+            force_y = self.fuzzy_controller_hautbas.get_direction(distance_wall[1], distance_obstacle[1], wall_obstacle[1])
 
         if(show_debug_info):
             print(f"distance_wall={distance_wall}\ndistance_obstacle({distance_obstacle})\nforces({force_x}, {force_y})\n")
@@ -222,7 +223,7 @@ class IA_Player:
     
     def getDirection(self, player: Player, walls: list[pygame.Rect]):
         current_position = [*player.get_center()]
-        active_coord = (int(np.floor(current_position[1]/50)), int(np.floor(current_position[0]/50)))
+        active_coord = (int(np.floor(current_position[1]/40)), int(np.floor(current_position[0]/40)))
         next_coord = self.path[active_coord]
         delta=np.asarray(next_coord) - np.asarray(active_coord)
 
