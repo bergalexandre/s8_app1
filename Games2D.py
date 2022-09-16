@@ -5,7 +5,7 @@ from Player import *
 from Maze import *
 from Constants import *
 from IA_Player import *
-from genetic import Genetic
+from genetic import Genetic, bin2ufloat
 
 class App:
     windowWidth = WIDTH
@@ -25,9 +25,13 @@ class App:
         self.timer = 0.0
         self.player = Player()
         self.maze = Maze(mazefile)
-        self.genetic = Genetic(NUM_ATTRIBUTES, 10000, 13)
-        self.genetic.set_crossover_modulo(np.array([0,0,0,0,0,1,1,1,1,1,1,1,1]))
-        self.genetic.set_sim_parameters(5000, 0.11, 0.8)
+        self.genetic = Genetic(NUM_ATTRIBUTES, 300, 14)
+        self.genetic.set_crossover_modulo(np.array([1,1,0,0,1,1,0,0,1,1,0,0,1,0]))
+        self.genetic.set_sim_parameters(5, 0.02, 0.8, 0.01)
+        
+        # self.genetic = Genetic(NUM_ATTRIBUTES, 300, 14)
+        # self.genetic.set_crossover_modulo(np.array([1,1,0,0,1,1,0,0,1,1,0,0,1,0]))
+        # self.genetic.set_sim_parameters(500, 0.02, 0.8, 0.01)
 
     def on_init(self):
         pygame.init()
@@ -43,19 +47,18 @@ class App:
         self.player.set_size(PLAYER_SIZE*self.maze.tile_size_x, PLAYER_SIZE*self.maze.tile_size_x)
         self._image_surf = pygame.transform.scale(self._image_surf, self.player.get_size())
         self._block_surf = pygame.image.load("assets/wall.png")
-        self.ia_player = IA_Player(max(self.maze.tile_size_x, self.maze.tile_size_y), self.maze)
+        self.ia_player = IA_Player((self.maze.tile_size_x, self.maze.tile_size_y), self.maze)
 
     def genetic_loop(self):
-        
-
-        victory = False
-        while victory == False:
+        for _ in range(self.genetic.num_generations):
             population_fitness = []
             for individu in self.genetic.decode_individuals():
                 number_of_wins = 0
+                
                 for monster in self.maze.monsterList:
+                    TEST = monster.mock_fight(self.player)
                     self.player.set_attributes(individu)
-                    number_of_wins += (monster.mock_fight(self.player))
+                    number_of_wins += monster.mock_fight(self.player)[0]
                 
                 population_fitness.append(number_of_wins)
 
@@ -64,9 +67,10 @@ class App:
 
             print(f"generation {self.genetic.current_gen}:")
             print(f"\tbest fitness: {self.genetic.bestIndividualFitness}")
-            print(f"\ttotal fitness: {np.sum(self.genetic.fitness)}")
+            print(f"\tavg fitness: {np.sum(self.genetic.fitness)/self.genetic.pop_size}")
 
             self.genetic.new_gen()
+        self.player.set_attributes(bin2ufloat(np.reshape(self.genetic.bestIndividual, (NUM_ATTRIBUTES, -1)), self.genetic.nbits))
 
     def on_keyboard_input(self, keys):
         if keys[K_RIGHT] or keys[K_d]:
@@ -203,6 +207,7 @@ class App:
 
     def on_execute(self):
         self.on_init()
+        self.genetic_loop()
 
         direction = None
 
@@ -231,6 +236,7 @@ class App:
                 self.score += 1
             if self.on_treasure_collision():
                 self.score += 10
+                self.ia_player.FIND_TREASURE = False
             monster = self.on_monster_collision()
             if monster:
                 if monster.fight(self.player):

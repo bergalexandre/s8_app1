@@ -29,14 +29,20 @@ class IA_Player:
     def __init__(self, maze_tile_size, maze):
         self.prolog_thread = self.mqi.create_thread()
         self.prolog_thread.query("[prolog/pathfinder]")
-        self.fuzzy_controller = IA_FuzzyController(maze_tile_size)
-        self.maze_tile_size = maze_tile_size
+        self.maze_tile_size_x, self.maze_tile_size_y = maze_tile_size
+        self.fuzzy_controller = IA_FuzzyController(self.maze_tile_size_x)
         
         self.maze = maze.maze
         self.node_matrix = None
-        start_x, start_y, end_x, end_y = self.nodify_maze()
-        self.path = self.build_tree(start_x, start_y, end_x, end_y)
-        print("")
+        start, end = self.nodify_maze()
+        self.path = self.build_tree(start, end)
+        
+        # Pour trésor
+        self.FIND_TREASURE = False
+        m = np.array(self.maze)
+        all_treasure = np.argwhere(m=='T')
+        end = np.argwhere(m=='E')
+        self.all_goals = np.vstack((all_treasure,end))
         
 
     def __del__(self):
@@ -115,8 +121,8 @@ class IA_Player:
         north_walls = list(filter(lambda wall: self.isWallNorth(wall, player), walls))
         south_walls = list(filter(lambda wall: self.isWallSouth(wall, player), walls))
 
-        distance_wall_x = [PERCEPTION_RADIUS*self.maze_tile_size]
-        distance_wall_y = [PERCEPTION_RADIUS*self.maze_tile_size]
+        distance_wall_x = [PERCEPTION_RADIUS*self.maze_tile_size_x]
+        distance_wall_y = [PERCEPTION_RADIUS*self.maze_tile_size_y]
 
         player_x, player_y = player.get_center()
         player_w = player.get_size()[0]/2
@@ -129,16 +135,16 @@ class IA_Player:
         distance_wall_x = min(distance_wall_x, key=abs)
         distance_wall_y = min(distance_wall_y, key=abs)
 
-        distance_obstacle_x = [PERCEPTION_RADIUS*self.maze_tile_size]
-        distance_obstacle_y = [PERCEPTION_RADIUS*self.maze_tile_size]
+        distance_obstacle_x = [PERCEPTION_RADIUS*self.maze_tile_size_x]
+        distance_obstacle_y = [PERCEPTION_RADIUS*self.maze_tile_size_y]
         distance_obstacle_x += ([(obstacle.centerx - player_x)for obstacle in obstacles])
         distance_obstacle_y += ([(obstacle.centery - player_y)for obstacle in obstacles])
 
         distance_obstacle_x = min(distance_obstacle_x, key=abs)
         distance_obstacle_y = min(distance_obstacle_y, key=abs)
 
-        wall_obstacle_x = [PERCEPTION_RADIUS*self.maze_tile_size]
-        wall_obstacle_y = [PERCEPTION_RADIUS*self.maze_tile_size]
+        wall_obstacle_x = [PERCEPTION_RADIUS*self.maze_tile_size_x]
+        wall_obstacle_y = [PERCEPTION_RADIUS*self.maze_tile_size_y]
 
         if(direction == "UP"):
             wall_obstacle_x += ([(wall.centerx - (wall.width/2) - (player_x+player_w)) for wall in north_walls])
@@ -165,17 +171,17 @@ class IA_Player:
 
         match direction:
             case "UP":
-                distance_obstacle = (distance_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
-                wall_obstacle = (wall_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
+                distance_obstacle = (distance_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size_x)
+                wall_obstacle = (wall_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size_x)
             case "DOWN":
-                distance_obstacle = (distance_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
-                wall_obstacle = (wall_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size)
+                distance_obstacle = (distance_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size_x)
+                wall_obstacle = (wall_obstacle[0], PERCEPTION_RADIUS*self.maze_tile_size_x)
             case "LEFT":
-                distance_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size, distance_obstacle[1])
-                wall_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size, wall_obstacle[1])
+                distance_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size_x, distance_obstacle[1])
+                wall_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size_x, wall_obstacle[1])
             case "RIGHT":
-                distance_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size, distance_obstacle[1])
-                wall_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size, wall_obstacle[1])
+                distance_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size_x, distance_obstacle[1])
+                wall_obstacle = (PERCEPTION_RADIUS*self.maze_tile_size_x, wall_obstacle[1])
 
         if(direction == "LEFT"  or direction == "RIGHT"):
             force_x = 0
@@ -222,9 +228,12 @@ class IA_Player:
     
     def getDirection(self, player: Player, walls: list[pygame.Rect]):
         current_position = [*player.get_center()]
-        active_coord = (int(np.floor(current_position[1]/50)), int(np.floor(current_position[0]/50)))
-        next_coord = self.path[active_coord]
-        delta=np.asarray(next_coord) - np.asarray(active_coord)
+        active_coord = (int(np.floor(current_position[1]/self.maze_tile_size_x)), int(np.floor(current_position[0]/self.maze_tile_size_y))) 
+        next_coord = self.getPath(active_coord)
+        if next_coord:
+            delta=np.asarray(next_coord) - np.asarray(active_coord)
+        else:
+            delta=np.array([0.0, 0.0])
 
         direction = None
 
@@ -240,27 +249,56 @@ class IA_Player:
         elif (delta ==[0.0, -1.0]).all():
             if(self.is_direction_free(walls, player, ("LEFT",))): #one value tuple
                 direction= "LEFT"
+        else:
+            direction=None
                       
         return direction
+    
+    def getPath(self, active_coord):
+        
+        closest_goal = np.argmin([(active_coord[0]-i[0])**2+(active_coord[1]-i[1])**2 for i in self.all_goals])
+
+        if self.FIND_TREASURE == False:
+            start, end = self.nodify_maze(Custom_start=active_coord, Tresor=self.all_goals[closest_goal])
+            self.path = self.build_tree(start, end)
+            self.all_goals = np.delete(self.all_goals, closest_goal,0)
+            self.FIND_TREASURE = True
+        
+        if active_coord not in self.path:
+            start, end = self.nodify_maze(Custom_start=active_coord, Tresor=self.all_goals[closest_goal])
+            self.path = self.build_tree(start, end)
+            return 
+                
+        if active_coord in self.path:
+            return self.path[active_coord]
+        
+        if active_coord not in self.path:
+            start, end = self.nodify_maze(Custom_start=active_coord)
+            self.path = self.build_tree(start, end)
+            return self.path[active_coord]
         
     
-    def nodify_maze(self):
+    def nodify_maze(self, Custom_start=None, Tresor=None):
         self.node_matrix = dd(dict)
         m = np.array(self.maze)
-        start = np.where(m=='S')
-        end = np.where(m=='E')
+        start = np.argwhere(m=='S')
+        end = np.argwhere(m=='E')
+        
+        
+        if Custom_start is not None:
+            start = np.asarray(Custom_start)
+            
+        if Tresor is not None:
+            end = np.asarray(Tresor)
+            
         
         all_coordinates = np.dstack(np.where(m.T))
         all_coordinates = all_coordinates[0, :, :]
         
-        # Coordinates of start and end in a numpy array
-        self.start = np.concatenate((start[0], start[1]), axis=0)
-        #self.start = np.hstack(start)
-        self.end = np.concatenate((end[1], end[0]), axis=0)
-        #self.end = np.hstack(end)
+
         
         # Wall matrix and heuristic matrix
-        heuristic_matrix = np.linalg.norm(all_coordinates - self.end, axis=1)
+        heuristic_matrix = np.linalg.norm(all_coordinates - end, axis=1)
         LONGUEUR = len(m)
         HAUTEUR = len(m[0])
         heuristic_matrix = np.reshape(heuristic_matrix, (HAUTEUR, LONGUEUR)).T      
@@ -276,10 +314,8 @@ class IA_Player:
                 else:
                     self.node_matrix[i][j] = Case(i, j, heuristic_matrix[i][j],)
         
-        start_x , start_y = self.start
-        end_y , end_x = self.end
         
-        return start_x , start_y, end_x, end_y
+        return  np.squeeze(start), np.squeeze(end)
         
     def h(self, c1, c2):
         x1,y1=c1
@@ -287,13 +323,17 @@ class IA_Player:
         
         return np.sqrt(abs(x1-x2)**2 + abs(y1-y2)**2)
         
-    def build_tree(self, x, y, _x, _y):
+    def build_tree(self, S, E):
         LONGUEUR = len(self.node_matrix)
         HAUTEUR = len(self.node_matrix[0])
         
         open_nodes = []
         closed_nodes = []
-        start = (x,y)
+        
+        x, y = S[0],S[1]
+        _x, _y = E[0],E[1]
+        
+        start = (x, y)
         end = (_x, _y)
         self.node_matrix[x][y].g = 0
         self.node_matrix[x][y].f = self.h(start,end)
