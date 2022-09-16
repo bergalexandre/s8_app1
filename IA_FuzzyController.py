@@ -45,10 +45,10 @@ class IA_FuzzyController2:
         obstacle_x["loin_d"] = fuzz.trapmf(obstacle_x.universe, [perception_distance*0.29, perception_distance*0.35, perception_distance, perception_distance])
 
         #obstacle_x["loin_opp"] = fuzz.trapmf(obstacle_x.universe, [-perception_distance, -perception_distance, -perception_distance*0.3, 0])
-        obstacle_y["loin_g"] = fuzz.trapmf(obstacle_y.universe, [-perception_distance, -perception_distance, -perception_distance*0.5, -perception_distance*0.4])
-        obstacle_y["proche_g"] = fuzz.trapmf(obstacle_y.universe, [-perception_distance*0.5, -perception_distance*0.4, 0, 0,])
-        obstacle_y["proche_d"] = fuzz.trapmf(obstacle_y.universe, [0, 0, perception_distance*0.4, perception_distance*0.5])
-        obstacle_y["loin_d"] = fuzz.trapmf(obstacle_y.universe, [perception_distance*0.4, perception_distance*0.5, perception_distance, perception_distance])
+        obstacle_y["loin_g"] = fuzz.trapmf(obstacle_y.universe, [-perception_distance, -perception_distance, -perception_distance*0.2, -perception_distance*0.1])
+        obstacle_y["proche_g"] = fuzz.trapmf(obstacle_y.universe, [-perception_distance*0.2, -perception_distance*0.1, 0, 0,])
+        obstacle_y["proche_d"] = fuzz.trapmf(obstacle_y.universe, [0, 0, perception_distance*0.1, perception_distance*0.2])
+        obstacle_y["loin_d"] = fuzz.trapmf(obstacle_y.universe, [perception_distance*0.1, perception_distance*0.2, perception_distance, perception_distance])
         #obstacle_y["loin_opp"] = fuzz.trapmf(obstacle_y.universe, [-perception_distance, -perception_distance, -perception_distance*0.3, 0])
 
         tresor_x["aucun_g"] = fuzz.trapmf(obstacle_y.universe, [-perception_distance, -perception_distance, -perception_distance*0.99, -perception_distance*0.98])

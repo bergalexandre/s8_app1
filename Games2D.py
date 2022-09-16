@@ -25,9 +25,9 @@ class App:
         self.timer = 0.0
         self.player = Player()
         self.maze = Maze(mazefile)
-        self.genetic = Genetic(NUM_ATTRIBUTES, 1000, 11)
+        self.genetic = Genetic(NUM_ATTRIBUTES, 100, 11)
         self.genetic.set_crossover_modulo(np.array([0,0,1,0,0,1,1,1,1,0,0]))
-        self.genetic.set_sim_parameters(1, 0.7, 0.8)
+        self.genetic.set_sim_parameters(10, 0.7, 0.8)
 
     def on_init(self):
         pygame.init()
@@ -53,7 +53,6 @@ class App:
                 number_of_wins = 0
                 fitness = 0
                 for monster in self.maze.monsterList:
-                    TEST = monster.mock_fight(self.player)
                     self.player.set_attributes(individu)
                     fight = monster.mock_fight(self.player)[0]
                     number_of_wins += fight
@@ -67,7 +66,7 @@ class App:
 
             print(f"generation {self.genetic.current_gen}:")
             print(f"\tbest fitness: {max(population_win)}")
-            print(f"\tavg fitness: {np.sum(population_win)/1000}")
+            print(f"\tavg fitness: {np.sum(population_win)/100}")
 
             self.genetic.new_gen()
         self.player.set_attributes(bin2ufloat(np.reshape(self.genetic.bestIndividual, (NUM_ATTRIBUTES, -1)), 11))
